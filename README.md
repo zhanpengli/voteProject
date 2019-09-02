@@ -1,7 +1,8 @@
 # voteProject
 投票系统
 
-```````
+------
+
 ### 1. 环境搭建
         node版本: v10.15.3
         包下载：npm install
