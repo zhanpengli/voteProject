@@ -16,7 +16,7 @@ const specialUrls = [
 ];
 
 module.exports = async (ctx, next) => {
-    if (process.env.NODE_ENV != 'production' && (specialUrls.indexOf(ctx.url)!==-1 || ctx.url.match('/user/activateEmail'))) {
+    if (specialUrls.indexOf(ctx.url)!==-1 || ctx.url.match('/user/activateEmail')) {
         try {
             return await next();
         } catch (error) {
