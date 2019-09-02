@@ -36,6 +36,7 @@
     4021: 'Please re-select, the number of votes is two or more',//请重新选择，票数两人及以上
     4022: 'Please re-select, the number of votes cannot exceed five',// 票数不能少于2或大于5
     4023: 'The number of votes cannot exceed half of the number of candidates',//票数不能超过候选人数一半
+    4024: 'Voting is busy, please try again later',//投票繁忙，请稍后重试
 ```
 
 ### 4.接口文档
