@@ -114,6 +114,8 @@ class User {
             let voteFlag = await utils.redis.get(redisKey.voteFlag);
             if (voteFlag) return { success: false, code: 4016, msg: 'Voting is busy, please try again later' };
             await utils.redis.set(redisKey.voteFlag, 1);
+            //给锁设置生命周期，如发生异常没有删除锁也只能保留5s
+            await utils.redis.expire(redisKey.voteFlag, 5);
 
             //判断投票是否开始
             let res1 = await utils.redis.get(redisKey.voteStatus);
@@ -121,8 +123,6 @@ class User {
             if (res1 == '2') return { success: false, code: 4017, msg: 'Voting is over started and cannot be operated' };
         }
         catch (error) {
-            //如出现异常，给锁设置生命周期
-            await utils.redis.expire(redisKey.voteFlag, 5);
             utils.logger.error('user vote redis error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
@@ -135,7 +135,6 @@ class User {
             if (res2.isVote == 1) return { success: false, code: 4019, msg: "Can't vote again" };
         }
         catch (error) {
-            await utils.redis.expire(redisKey.voteFlag, 5);
             utils.logger.error('user vote mongodb find error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
@@ -179,7 +178,6 @@ class User {
             await Model.votes('candidate').bulkWrite(updateOptions);
         }
         catch (error) {
-            await utils.redis.expire(redisKey.voteFlag, 5);
             utils.logger.error('user vote mongodb find/bulkWrite error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
@@ -190,7 +188,6 @@ class User {
             return { success: 200, msg: 'ok' };
         }
         catch (error) {
-            await utils.redis.expire(redisKey.voteFlag, 5);
             utils.logger.error('user vote mongodb_update/redis_del error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
