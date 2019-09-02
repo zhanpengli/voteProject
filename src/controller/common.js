@@ -1,16 +1,4 @@
-# voteProject
-投票系统
-
-```````
-### 1. 环境搭建
-        node版本: v10.15.3
-        包下载：npm install
-
-### 2. 项目运行
-        node src/app.js
-
-### 3.code返回值说明
-```javascript
+const error = {
     4000: 'Undefined error information', //未定义的错误信息
     4001: 'Params error', //参数错误
     4002: 'Request type error', //请求执行类型错误
@@ -35,7 +23,48 @@
     4021: 'Please re-select, the number of votes is two or more',//请重新选择，票数两人及以上
     4022: 'Please re-select, the number of votes cannot exceed five',// 票数不能少于2或大于5
     4023: 'The number of votes cannot exceed half of the number of candidates',//票数不能超过候选人数一半
-```
+}
 
-### 4.接口文档
-    项目运行后查看地址：http://127.0.0.1:2019/apiDocs
+
+
+class Common {
+    constructor() {}
+
+    /**
+     * 统一处理成功返回
+     * @param {*} ctx
+     * @param {*} data
+     */
+    static successResponse(ctx, data, msg = 'success') {
+        if(!data) return ctx.response.body = { msg, code: 200};
+        return ctx.response.body = { msg, code: 200, data };
+    }
+
+    /**
+     * 统一处理错误返回
+     * @param {*} ctx
+     * @param {4000~4008} code
+     * @param {*} msg 
+     */
+    static failResponse(ctx, code = 4000, msg) {
+        msg = msg || error[code] || 'fail';
+        return ctx.response.body = { code, msg }
+    }
+
+    /**
+     * 统一处理返回结果
+     * @param {*} ctx
+     * @param {object:{data,msg,success}} result
+     * @param {*} code
+     */
+    static setResponse(ctx, result) {
+        if (result && result.success) {
+            return Common.successResponse(ctx, result.data, result.msg);
+        } else {
+            result = result || { code: 4000, msg: 'fail' };
+            return Common.failResponse(ctx, result.code, result.msg);
+        }
+    }
+}
+
+module.exports = Common;
