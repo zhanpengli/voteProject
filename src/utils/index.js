@@ -7,6 +7,7 @@ const util = require('util');
 const config = require('../config').config;
 const jwt = require('jsonwebtoken');
 const emailHelper = require('./emailHelper');
+const _ = require('lodash');
 
 module.exports = {
     logger,
@@ -17,5 +18,6 @@ module.exports = {
     util,
     config,
     jwt,
-    emailHelper
+    emailHelper,
+    _
 }

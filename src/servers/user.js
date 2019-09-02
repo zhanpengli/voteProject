@@ -110,6 +110,11 @@ class User {
      */
     async vote(email, param) {
         try {
+            //加锁防止多个用户同时操作投票
+            let voteFlag = await utils.redis.get(redisKey.voteFlag);
+            if (voteFlag) return { success: false, code: 4016, msg: 'Voting is busy, please try again later' };
+            await utils.redis.set(redisKey.voteFlag, 1);
+
             //判断投票是否开始
             let res1 = await utils.redis.get(redisKey.voteStatus);
             if (!res1) return { success: false, code: 4016, msg: 'Voting has not started and cannot be operated' };
@@ -142,7 +147,9 @@ class User {
             msg: 'Please re-select, the number of votes is two or more and cannot exceed five' };
 
         try {
-            let candidateNum = await Model.votes('candidate').count({});
+            let candidates = await Model.votes('candidate').find({});
+            candidates = JSON.parse(JSON.stringify(candidates));
+            let candidateNum = candidates.length;
             if (2 < candidateNum < 10) {
                 //用户所投总票数不能超过候选人总数一半
                 if (votesNum > (candidateNum / 2)) return { success: false, code: 4012, 
@@ -152,23 +159,34 @@ class User {
             //批量更新
             let updateOptions = [];
             param.forEach(e => {
+                let arr = utils._.filter(candidates, function(o) {return o.name == e.name});
                 updateOptions.push({
                     updateOne: {
                         filter: {
                             name : e.name
                         },
                         update: {
-                            $set: {votes: e.votes}
+                            $set: {
+                                'votes': e.votes + (arr[0] && arr[0].votes ? arr[0].votes : 0)
+                            }
                         }
                     }
                 })
             })
             await Model.votes('candidate').bulkWrite(updateOptions);
-            await Model.votes('user').update({ email: email }, {$set: { isVote: 1 }})
+        }
+        catch (error) {
+            utils.logger.error('user vote mongodb find/bulkWrite error: ', error.message);
+            return { success: false, code: 4012, msg: 'Database operation exception' };
+        }
+
+        try {
+            await utils.redis.del(redisKey.voteFlag);
+            await Model.votes('user').update({ email: email }, {$set: { isVote: 1 }});
             return { success: 200, msg: 'ok' };
         }
         catch (error) {
-            utils.logger.error('user vote mongodb count/bulkWrite/update error: ', error.message);
+            utils.logger.error('user vote mongodb_update/redis_del error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
     }

@@ -1,3 +1,4 @@
 module.exports = {
-    voteStatus: "voteStatus"
+    voteStatus: "voteStatus",
+    voteFlag: "voteFlag"
 }
