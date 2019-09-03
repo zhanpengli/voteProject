@@ -10,7 +10,10 @@
 ### 2. 项目运行
         node src/app.js
 
-### 3.code返回值说明
+### 3. 接口文档
+    项目运行后查看地址：http://127.0.0.1:2019/apiDocs
+
+### 4. code返回值说明
 ```javascript
     4000: 'Undefined error information', //未定义的错误信息
     4001: 'Params error', //参数错误
@@ -38,6 +41,3 @@
     4023: 'The number of votes cannot exceed half of the number of candidates',//票数不能超过候选人数一半
     4024: 'Voting is busy, please try again later',//投票繁忙，请稍后重试
 ```
-
-### 4.接口文档
-    项目运行后查看地址：http://127.0.0.1:2019/apiDocs

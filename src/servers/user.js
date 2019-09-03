@@ -114,15 +114,17 @@ class User {
             let voteFlag = await utils.redis.get(redisKey.voteFlag);
             if (voteFlag) return { success: false, code: 4016, msg: 'Voting is busy, please try again later' };
             await utils.redis.set(redisKey.voteFlag, 1);
-            //给锁设置生命周期，如发生异常没有删除锁也只能保留5s
-            await utils.redis.expire(redisKey.voteFlag, 5);
 
-            //判断投票是否开始
+            //判断投票状态，未开始或结束都不能进行操作了
             let res1 = await utils.redis.get(redisKey.voteStatus);
-            if (!res1) return { success: false, code: 4016, msg: 'Voting has not started and cannot be operated' };
-            if (res1 == '2') return { success: false, code: 4017, msg: 'Voting is over started and cannot be operated' };
+            if (!res1 || res1 ==2) {
+                await utils.redis.del(redisKey.voteFlag);
+                if (!res1) return { success: false, code: 4016, msg: 'Voting has not started and cannot be operated' };
+                return { success: false, code: 4017, msg: 'Voting is over started and cannot be operated' };
+            }
         }
         catch (error) {
+            await utils.redis.del(redisKey.voteFlag);
             utils.logger.error('user vote redis error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
@@ -131,10 +133,14 @@ class User {
             //判断用户邮箱是否激活和重复投票
             let res2 = await Model.votes('user').findOne({ email: email }, ['name', 'status', 'isVote']);
             res2 = JSON.parse(JSON.stringify(res2));
-            if (res2.status == 0) return { success: false, code: 4018, msg: 'Mailbox is not activated' };
-            if (res2.isVote == 1) return { success: false, code: 4019, msg: "Can't vote again" };
+            if (res2.status == 0 || res2.isVote == 1) {
+                await utils.redis.del(redisKey.voteFlag);
+                if (res2.status == 0) return { success: false, code: 4018, msg: 'Mailbox is not activated' };
+                return { success: false, code: 4019, msg: "Can't vote again" };
+            }
         }
         catch (error) {
+            await utils.redis.del(redisKey.voteFlag);
             utils.logger.error('user vote mongodb find error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
@@ -145,8 +151,10 @@ class User {
         })
 
         //判断投用户所投总票数是否大于2并小于5
-        if (votesNum < 2 || votesNum > 5) return { success: false, code: 4021, 
-            msg: 'Please re-select, the number of votes is two or more and cannot exceed five' };
+        if (votesNum < 2 || votesNum > 5) {
+            await utils.redis.del(redisKey.voteFlag);
+            return { success: false, code: 4021, msg: 'Please re-select, the number of votes is two or more and cannot exceed five' };
+        }
 
         try {
             let candidates = await Model.votes('candidate').find({});
@@ -178,16 +186,19 @@ class User {
             await Model.votes('candidate').bulkWrite(updateOptions);
         }
         catch (error) {
+            await utils.redis.del(redisKey.voteFlag);
             utils.logger.error('user vote mongodb find/bulkWrite error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
 
         try {
+            //删除锁，更新用户是否已投票
             await utils.redis.del(redisKey.voteFlag);
             await Model.votes('user').update({ email: email }, {$set: { isVote: 1 }});
             return { success: 200, msg: 'ok' };
         }
         catch (error) {
+            await utils.redis.del(redisKey.voteFlag);
             utils.logger.error('user vote mongodb_update/redis_del error: ', error.message);
             return { success: false, code: 4012, msg: 'Database operation exception' };
         }
